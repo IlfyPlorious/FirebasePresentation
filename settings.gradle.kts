@@ -19,5 +19,5 @@ dependencyResolutionManagement {
     }
 }
 
-rootProject.name = "Detectcar"
+rootProject.name = "FirebaseDemo"
 include(":app")
