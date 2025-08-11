@@ -1,0 +1,11 @@
+<resources>
+    <string name="app_name">Detectcar</string>
+    <string name="camera_permission_error">You must give permission to use your camera in order to use the application</string>
+    <string name="settings">Settings</string>
+    <string name="thumbs_up_down_label">Tell us how did the prediction go!</string>
+    <string name="save_button">Save</string>
+    <string name="hero_title">Hello there 👋!</string>
+    <string name="hero_subtitle">You just got your hands on a detectacar. Turn on your lights to detect a car!</string>
+    <string name="info_dialog_desc">The prediction is being made using a neural network based on a ResNet architecture, together with a bounding box detector in form of YOLO. The prediction is yet to be improved, so we count on your feedback to make it work better!</string>
+    <string name="close">Close</string>
+</resources>
