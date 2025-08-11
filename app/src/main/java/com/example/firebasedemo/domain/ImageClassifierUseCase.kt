@@ -5,7 +5,7 @@ import android.graphics.Bitmap
 import android.graphics.BitmapFactory
 import android.net.Uri
 import com.example.firebasedemo.di.IoDispatcher
-import com.example.firebasedemo.domain.repository.ClassifierRepository
+import com.example.firebasedemo.domain.repository.CustomClassifierRepository
 import com.example.firebasedemo.util.Brand
 import com.example.firebasedemo.util.mapPredictionToBrand
 import dagger.hilt.android.qualifiers.ApplicationContext
@@ -22,7 +22,7 @@ class ImageClassifierUseCaseImpl @Inject constructor(
     private val ioDispatcher: CoroutineDispatcher,
     @ApplicationContext
     private val context: Context,
-    private val classifierRepository: ClassifierRepository
+    private val classifierRepository: CustomClassifierRepository
 ) : ImageClassifierUseCase {
     override suspend fun classify(imageUri: Uri): Result<Brand> = withContext(ioDispatcher) {
         val bitmap = loadBitmapFromUri(imageUri)

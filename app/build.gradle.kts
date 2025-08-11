@@ -2,6 +2,7 @@ plugins {
     alias(libs.plugins.android.application)
     alias(libs.plugins.kotlin.android)
     alias(libs.plugins.compose.compiler)
+    id("com.google.gms.google-services")
     id("com.google.dagger.hilt.android")
     kotlin("kapt")
 }
@@ -60,6 +61,7 @@ dependencies {
     implementation("androidx.compose.ui:ui-tooling-preview")
     implementation("androidx.compose.material3:material3")
     implementation(libs.androidx.foundation.layout)
+
     debugImplementation("androidx.compose.ui:ui-tooling")
 
     // ✅ Navigation for Compose
@@ -105,10 +107,10 @@ dependencies {
 
     implementation("com.squareup.moshi:moshi:1.15.0")
 
-// Moshi Kotlin support (this includes KotlinJsonAdapterFactory)
+    // Moshi Kotlin support (this includes KotlinJsonAdapterFactory)
     implementation("com.squareup.moshi:moshi-kotlin:1.15.0")
 
-// Moshi codegen for annotation processing (optional but recommended)
+    // Moshi codegen for annotation processing (optional but recommended)
     kapt("com.squareup.moshi:moshi-kotlin-codegen:1.15.0")
 
     // ... other dependencies
@@ -116,6 +118,23 @@ dependencies {
     // You'll also likely need camera-lifecycle and camera-view
     implementation("androidx.camera:camera-lifecycle:1.3.1")
     implementation("androidx.camera:camera-view:1.3.1")
+
+    /**
+     * Firebase dependencies
+     */
+
+    // Core
+    implementation(platform("com.google.firebase:firebase-bom:34.1.0"))
+    implementation("com.google.firebase:firebase-analytics")
+
+    // Additional
+
+    implementation("com.google.firebase:firebase-ml-modeldownloader")
+
+    // Also add the dependency for the TensorFlow Lite library and specify its version
+    implementation("org.tensorflow:tensorflow-lite:2.17.0")
+    // helps with performance and op support
+    // For task-specific libraries (e.g., image classification))
 
     testImplementation(libs.junit)
     androidTestImplementation(libs.androidx.junit)

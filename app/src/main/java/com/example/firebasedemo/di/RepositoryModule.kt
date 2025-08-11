@@ -1,14 +1,10 @@
 package com.example.firebasedemo.di
 
-import android.content.Context
-import com.example.firebasedemo.domain.repository.ClassifierRepository
-import com.example.firebasedemo.domain.repository.ClassifierRepositoryImpl
-import dagger.Binds
+import com.example.firebasedemo.domain.repository.CustomClassifierRepository
+import com.example.firebasedemo.domain.repository.CustomClassifierRepositoryImpl
 import dagger.Module
 import dagger.Provides
 import dagger.hilt.InstallIn
-import dagger.hilt.android.components.ActivityRetainedComponent
-import dagger.hilt.android.qualifiers.ApplicationContext
 import dagger.hilt.components.SingletonComponent
 
 @Module
@@ -16,7 +12,5 @@ import dagger.hilt.components.SingletonComponent
 class RepositoryModule {
 
     @Provides
-    fun provideClassifierRepositoryImpl(
-        @ApplicationContext context: Context
-    ): ClassifierRepository = ClassifierRepositoryImpl(context)
+    fun provideClassifierRepositoryImpl(): CustomClassifierRepository = CustomClassifierRepositoryImpl()
 }
