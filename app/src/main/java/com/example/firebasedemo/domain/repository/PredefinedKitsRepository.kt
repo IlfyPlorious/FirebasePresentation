@@ -2,6 +2,10 @@ package com.example.firebasedemo.domain.repository
 
 import android.graphics.Bitmap
 import com.example.firebasedemo.di.IoDispatcher
+import com.google.firebase.Firebase
+import com.google.firebase.ai.GenerativeModel
+import com.google.firebase.ai.ai
+import com.google.firebase.ai.type.GenerativeBackend
 import com.google.mlkit.vision.common.InputImage
 import com.google.mlkit.vision.objects.DetectedObject
 import com.google.mlkit.vision.objects.ObjectDetection
@@ -14,6 +18,7 @@ import javax.inject.Inject
 
 interface PredefinedKitsRepository {
     suspend fun detectObjectsInBitmap(bitmap: Bitmap): Result<List<DetectedObject>>
+    suspend fun askGemini(query: String): Result<String>
 }
 
 class PredefinedKitsRepositoryImpl @Inject constructor(
@@ -21,6 +26,7 @@ class PredefinedKitsRepositoryImpl @Inject constructor(
     private val ioDispatcher: CoroutineDispatcher
 ) : PredefinedKitsRepository {
     private var objectDetector: ObjectDetector? = null
+    private var geminiModel: GenerativeModel? = null
 
     private fun initDetector() {
 //        // Live detection and tracking
@@ -37,6 +43,11 @@ class PredefinedKitsRepositoryImpl @Inject constructor(
             .build()
 
         objectDetector = ObjectDetection.getClient(options)
+    }
+
+    private fun initGemini() {
+        geminiModel = Firebase.ai(backend = GenerativeBackend.googleAI())
+            .generativeModel("gemini-2.5-flash")
     }
 
     override suspend fun detectObjectsInBitmap(bitmap: Bitmap): Result<List<DetectedObject>> =
@@ -63,4 +74,18 @@ class PredefinedKitsRepositoryImpl @Inject constructor(
 
             return@withContext Result.success(detectedObjectsList)
         }
+
+    override suspend fun askGemini(query: String): Result<String> {
+        if (geminiModel == null) {
+            initGemini()
+        }
+        val response = try {
+            geminiModel?.generateContent(query)
+        } catch (e: Exception) {
+            return Result.failure(e)
+        }
+
+        return response?.text?.let { Result.success(it) }
+            ?: Result.failure(Exception("Error! Query result is empty."))
+    }
 }

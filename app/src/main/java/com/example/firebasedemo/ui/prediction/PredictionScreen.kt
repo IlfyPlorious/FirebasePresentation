@@ -9,11 +9,15 @@ import androidx.compose.foundation.layout.Arrangement
 import androidx.compose.foundation.layout.Column
 import androidx.compose.foundation.layout.PaddingValues
 import androidx.compose.foundation.layout.Row
+import androidx.compose.foundation.layout.fillMaxHeight
 import androidx.compose.foundation.layout.fillMaxSize
 import androidx.compose.foundation.layout.fillMaxWidth
+import androidx.compose.foundation.layout.height
 import androidx.compose.foundation.layout.padding
 import androidx.compose.foundation.layout.size
+import androidx.compose.foundation.rememberScrollState
 import androidx.compose.foundation.shape.RoundedCornerShape
+import androidx.compose.foundation.verticalScroll
 import androidx.compose.material.icons.Icons
 import androidx.compose.material.icons.filled.ArrowBack
 import androidx.compose.material.icons.filled.Info
@@ -24,9 +28,12 @@ import androidx.compose.material3.Button
 import androidx.compose.material3.ButtonDefaults
 import androidx.compose.material3.Card
 import androidx.compose.material3.CardDefaults
+import androidx.compose.material3.ExperimentalMaterial3Api
 import androidx.compose.material3.Icon
 import androidx.compose.material3.IconButton
+import androidx.compose.material3.ModalBottomSheet
 import androidx.compose.material3.Text
+import androidx.compose.material3.rememberModalBottomSheetState
 import androidx.compose.runtime.Composable
 import androidx.compose.runtime.collectAsState
 import androidx.compose.runtime.getValue
@@ -36,21 +43,31 @@ import androidx.compose.runtime.setValue
 import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
 import androidx.compose.ui.draw.rotate
+import androidx.compose.ui.graphics.ColorFilter
 import androidx.compose.ui.layout.ContentScale
 import androidx.compose.ui.platform.LocalContext
 import androidx.compose.ui.res.painterResource
 import androidx.compose.ui.res.stringResource
 import androidx.compose.ui.text.TextStyle
+import androidx.compose.ui.tooling.preview.Preview
 import androidx.compose.ui.unit.dp
 import androidx.compose.ui.unit.sp
 import androidx.hilt.navigation.compose.hiltViewModel
 import androidx.navigation.NavController
+import com.bumptech.glide.integration.compose.ExperimentalGlideComposeApi
+import com.bumptech.glide.integration.compose.GlideImage
 import com.example.firebasedemo.R
+import com.example.firebasedemo.domain.GeminiQueryUseCase
 import com.example.firebasedemo.ui.theme.DarkBlue
 import com.example.firebasedemo.ui.theme.DarkGray
+import com.example.firebasedemo.ui.theme.Orange
 import com.example.firebasedemo.ui.theme.Typography
 import com.example.firebasedemo.ui.theme.VeryLightGray
+import com.example.firebasedemo.util.GeminiQuery
+import com.halilibo.richtext.markdown.Markdown
+import com.halilibo.richtext.ui.BasicRichText
 
+@OptIn(ExperimentalMaterial3Api::class, ExperimentalGlideComposeApi::class)
 @Composable
 fun PredictionScreen(
     navController: NavController,
@@ -59,6 +76,11 @@ fun PredictionScreen(
     val brand = viewModel.predictionState.collectAsState()
     val thumbsUp = viewModel.thumbsUpButtonsState.collectAsState()
     var showDialog by remember { mutableStateOf(false) }
+
+    val geminiState = viewModel.geminiState.collectAsState()
+    val sheetState = rememberModalBottomSheetState(
+        skipPartiallyExpanded = false,
+    )
 
     val context = LocalContext.current
 
@@ -142,13 +164,59 @@ fun PredictionScreen(
         }
 
         Text(
-            text = "Uau! Mașina este o ${brand.value?.name}!\nCaută mai multe modele mai jos \uD83D\uDC47",
+            text = "Wow! The car is a ${brand.value?.name}!\nBrowse more models in the link below \uD83D\uDC47",
             fontSize = 18.sp,
             style = TextStyle(color = VeryLightGray, fontSize = 16.sp),
             modifier = Modifier
                 .padding(16.dp)
                 .weight(1f)
         )
+
+        Row(
+            modifier = Modifier
+                .padding(12.dp)
+                .fillMaxWidth(),
+            verticalAlignment = Alignment.CenterVertically,
+            horizontalArrangement = Arrangement.Center
+        ) {
+            Card(
+                modifier = Modifier.clickable { viewModel.askGeminiAboutTheBrand() },
+                shape = RoundedCornerShape(8.dp),
+                colors = CardDefaults.cardColors(containerColor = VeryLightGray)
+            ) {
+                Row(
+                    verticalAlignment = Alignment.CenterVertically,
+                    horizontalArrangement = Arrangement.Center
+                ) {
+                    if (geminiState.value !is PredictionViewModel.GeminiState.Thinking) {
+                        Image(
+                            painter = painterResource(
+                                id = R.drawable.stars
+                            ),
+                            modifier = Modifier
+                                .height(32.dp)
+                                .padding(6.dp),
+                            contentDescription = "Gemini icon",
+                            contentScale = ContentScale.Fit,
+                            colorFilter = ColorFilter.tint(Orange)
+                        )
+                    } else {
+                        GlideImage(
+                            modifier = Modifier
+                                .height(32.dp)
+                                .padding(6.dp),
+                            model = R.drawable.wheel_spin,
+                            contentDescription = "Loading indicator"
+                        )
+                    }
+                    Text(
+                        modifier = Modifier.padding(8.dp),
+                        text = if (geminiState.value !is PredictionViewModel.GeminiState.Thinking) "Ask Gemini about the brand" else "Gemini is thinking",
+                        style = Typography.titleLarge, color = DarkBlue
+                    )
+                }
+            }
+        }
 
         Row(
             modifier = Modifier
@@ -247,4 +315,41 @@ fun PredictionScreen(
             }
         }
     }
+
+    if (geminiState.value is PredictionViewModel.GeminiState.Ready) {
+        ModalBottomSheet(
+            modifier = Modifier.fillMaxHeight(),
+            sheetState = sheetState,
+            onDismissRequest = { viewModel.clearGeminiAnswer() }
+        ) {
+            Column(
+                modifier = Modifier
+                    .fillMaxWidth()
+                    .verticalScroll(rememberScrollState())
+                    .padding(16.dp)
+            ) {
+                BasicRichText(
+                    modifier = Modifier.padding(vertical = 8.dp),
+                ) {
+                    Markdown(
+                        (geminiState.value as PredictionViewModel.GeminiState.Ready).text
+                    )
+                }
+            }
+        }
+    }
+}
+
+
+@Preview
+@Composable
+fun PredictionScreenPreview() {
+    PredictionScreen(
+        navController = NavController(LocalContext.current),
+        viewModel = PredictionViewModel(object : GeminiQueryUseCase {
+            override suspend fun askGemini(query: GeminiQuery): Result<String> {
+                return Result.success("This is a prediction")
+            }
+        })
+    )
 }

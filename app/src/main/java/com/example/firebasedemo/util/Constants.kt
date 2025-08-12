@@ -54,3 +54,12 @@ enum class Brand(val id: Int, val color: Color, val website: String, val icon: I
     Isuzu(34, Color(0xFFFFFFFF), "https://www.isuzu.com", R.drawable.isuzu_logo),
     Ram(36, Color(0xFFF7F7F7), "https://www.ram.com", R.drawable.ram)
 }
+
+sealed class GeminiQuery {
+    abstract fun getQuery() : String
+    class CarBrandInfo(val brand: Brand) : GeminiQuery() {
+        override fun getQuery(): String {
+            return "I am a car enthusiast and I want to learn more about ${brand.name}. Tell me in a couple of sentences a bit about this brand's history, what's the most popular car and if I should buy it."
+        }
+    }
+}

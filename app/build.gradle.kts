@@ -139,6 +139,11 @@ dependencies {
     // object detection kit
     implementation("com.google.mlkit:object-detection:17.0.2")
 
+    // gemini / firebase ai
+    implementation("com.google.firebase:firebase-ai")
+    // markdown helper
+    implementation("com.halilibo.compose-richtext:richtext-commonmark:0.20.0")
+
     testImplementation(libs.junit)
     androidTestImplementation(libs.androidx.junit)
     androidTestImplementation(libs.androidx.espresso.core)
