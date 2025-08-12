@@ -9,12 +9,15 @@ import androidx.activity.compose.rememberLauncherForActivityResult
 import androidx.activity.result.contract.ActivityResultContracts
 import androidx.compose.foundation.Image
 import androidx.compose.foundation.background
+import androidx.compose.foundation.clickable
 import androidx.compose.foundation.layout.Arrangement
 import androidx.compose.foundation.layout.Box
 import androidx.compose.foundation.layout.Column
 import androidx.compose.foundation.layout.PaddingValues
+import androidx.compose.foundation.layout.Spacer
 import androidx.compose.foundation.layout.fillMaxSize
 import androidx.compose.foundation.layout.fillMaxWidth
+import androidx.compose.foundation.layout.height
 import androidx.compose.foundation.layout.padding
 import androidx.compose.foundation.layout.size
 import androidx.compose.foundation.layout.width
@@ -23,7 +26,13 @@ import androidx.compose.material.icons.Icons
 import androidx.compose.material.icons.filled.Close
 import androidx.compose.material3.Button
 import androidx.compose.material3.ButtonDefaults
+import androidx.compose.material3.DropdownMenuItem
+import androidx.compose.material3.ExperimentalMaterial3Api
+import androidx.compose.material3.ExposedDropdownMenuBox
 import androidx.compose.material3.Icon
+import androidx.compose.material3.MenuAnchorType
+import androidx.compose.material3.OutlinedTextField
+import androidx.compose.material3.OutlinedTextFieldDefaults
 import androidx.compose.material3.Text
 import androidx.compose.runtime.Composable
 import androidx.compose.runtime.LaunchedEffect
@@ -34,6 +43,7 @@ import androidx.compose.runtime.remember
 import androidx.compose.runtime.setValue
 import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
+import androidx.compose.ui.draw.rotate
 import androidx.compose.ui.graphics.Color
 import androidx.compose.ui.graphics.RectangleShape
 import androidx.compose.ui.graphics.painter.BitmapPainter
@@ -41,10 +51,12 @@ import androidx.compose.ui.layout.ContentScale
 import androidx.compose.ui.platform.LocalContext
 import androidx.compose.ui.res.painterResource
 import androidx.compose.ui.res.stringResource
+import androidx.compose.ui.text.TextStyle
 import androidx.compose.ui.text.font.FontWeight
 import androidx.compose.ui.text.style.TextAlign
 import androidx.compose.ui.tooling.preview.Preview
 import androidx.compose.ui.unit.dp
+import androidx.compose.ui.zIndex
 import androidx.core.content.ContextCompat
 import androidx.hilt.navigation.compose.hiltViewModel
 import androidx.lifecycle.compose.LocalLifecycleOwner
@@ -53,14 +65,17 @@ import com.bumptech.glide.integration.compose.ExperimentalGlideComposeApi
 import com.bumptech.glide.integration.compose.GlideImage
 import com.example.firebasedemo.R
 import com.example.firebasedemo.domain.ImageClassifierUseCase
+import com.example.firebasedemo.domain.ObjectDetectionUseCase
 import com.example.firebasedemo.ui.home.camera.CameraPreview
 import com.example.firebasedemo.ui.theme.DarkBlue
 import com.example.firebasedemo.ui.theme.LightGray
 import com.example.firebasedemo.ui.theme.Orange
 import com.example.firebasedemo.ui.theme.Typography
 import com.example.firebasedemo.ui.theme.VeryLightGray
+import com.example.firebasedemo.ui.theme.White
 import com.example.firebasedemo.util.Brand
 import com.example.firebasedemo.util.loadBitmapFromAssets
+import com.google.mlkit.vision.objects.DetectedObject
 
 
 @Composable
@@ -149,12 +164,15 @@ fun PermissionDeniedContent(content: @Composable () -> Unit) {
     }
 }
 
-@OptIn(ExperimentalGlideComposeApi::class)
+@OptIn(ExperimentalGlideComposeApi::class, ExperimentalMaterial3Api::class)
 @Composable
 fun MainContent(navController: NavController, viewModel: HomeViewModel) {
     val previewIsStarted = viewModel.previewIsStarted.collectAsState()
     val predictionIsLoading = viewModel.predictionIsLoading.collectAsState()
     val showError = viewModel.showError.collectAsState()
+    val isDropdownOpened = viewModel.isDropdownOpened.collectAsState()
+    val dropdownSelection = viewModel.dropdownSelection.collectAsState()
+    val boundingBoxedImage = viewModel.boundingBoxedImage.collectAsState()
 
     Column(
         modifier = Modifier
@@ -204,10 +222,26 @@ fun MainContent(navController: NavController, viewModel: HomeViewModel) {
                         modifier = Modifier
                             .weight(1f, fill = true)
                     ) { capturedImageUri ->
-                        viewModel.handleCapturedImage(capturedImageUri) { prediction ->
-                            navController.navigate("prediction/${prediction.id}")
+                        when (dropdownSelection.value) {
+                            HomeViewModel.DropdownItem.CustomModel -> viewModel.handleCapturedImageForCustomModel(
+                                capturedImageUri
+                            ) { prediction ->
+                                navController.navigate("prediction/${prediction.id}")
+                            }
+
+                            HomeViewModel.DropdownItem.PredefinedObjectDetector -> viewModel.handleCapturedImageForPredefinedModel(
+                                capturedImageUri
+                            )
                         }
                     }
+                } else if (boundingBoxedImage.value != null) {
+                    GlideImage(
+                        model = boundingBoxedImage.value,
+                        contentScale = ContentScale.Crop,
+                        modifier = Modifier
+                            .weight(1f, fill = true),
+                        contentDescription = "Bounding boxed image"
+                    )
                 } else {
                     Box(
                         modifier = Modifier.weight(1f, fill = true)
@@ -216,12 +250,13 @@ fun MainContent(navController: NavController, viewModel: HomeViewModel) {
             }
         }
 
+
         Button(
             shape = RectangleShape,
             contentPadding = PaddingValues(0.dp),
             modifier = Modifier
-                .weight(1f)
                 .fillMaxWidth()
+                .weight(1f)
                 .background(Color.Transparent)
                 .padding(0.dp),
             onClick = {
@@ -242,6 +277,57 @@ fun MainContent(navController: NavController, viewModel: HomeViewModel) {
                 contentScale = ContentScale.FillBounds
             )
         }
+
+        ExposedDropdownMenuBox(
+            expanded = isDropdownOpened.value,
+            onExpandedChange = {
+                if (isDropdownOpened.value)
+                    viewModel.closeDropdown()
+                else viewModel.expandDropdown()
+            }) {
+            OutlinedTextField(
+                value = dropdownSelection.value.name,
+                onValueChange = {},
+                readOnly = true,
+                modifier = Modifier
+                    .fillMaxWidth()
+                    .menuAnchor(MenuAnchorType.PrimaryNotEditable)
+                    .clickable { viewModel.expandDropdown() },
+                textStyle = TextStyle(color = White),
+                colors = OutlinedTextFieldDefaults.colors(
+                    focusedBorderColor = Orange,
+                    unfocusedBorderColor = White,
+                    cursorColor = White
+                ),
+                label = { Text("Recognition task", color = Orange) },
+            )
+
+            ExposedDropdownMenu(
+                expanded = isDropdownOpened.value,
+                onDismissRequest = { viewModel.closeDropdown() },
+                modifier = Modifier
+                    .zIndex(10f)
+                    .padding(12.dp)
+                    .fillMaxWidth()
+            ) {
+                HomeViewModel.DropdownItem.entries.forEachIndexed { index, item ->
+                    DropdownMenuItem(
+                        text = { Text(item.name, style = TextStyle(color = DarkBlue)) },
+                        onClick = {
+                            viewModel.setDropdownSelection(item)
+                            viewModel.closeDropdown()
+                        }
+                    )
+
+                    if (index < HomeViewModel.DropdownItem.entries.size - 1) Spacer(
+                        Modifier
+                            .height(1.dp)
+                            .fillMaxWidth()
+                            .background(DarkBlue)
+                    )
+                }
+            }
+        }
     }
 }
 
@@ -250,9 +336,13 @@ fun MainContent(navController: NavController, viewModel: HomeViewModel) {
 fun MainContentPreview() {
     MainContent(
         navController = NavController(LocalContext.current),
-        viewModel = HomeViewModel(object : ImageClassifierUseCase {
+        viewModel = HomeViewModel(LocalContext.current, object : ImageClassifierUseCase {
             override suspend fun classify(imageUri: Uri): Result<Brand> {
                 return Result.success(Brand.AstonMartini)
+            }
+        }, object : ObjectDetectionUseCase {
+            override suspend fun detectObjects(imageUri: Uri): Result<List<DetectedObject>> {
+                return Result.success(emptyList())
             }
         })
     )

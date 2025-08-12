@@ -3,26 +3,31 @@ package com.example.firebasedemo.domain.repository
 import android.graphics.Bitmap
 import android.graphics.Color
 import androidx.core.graphics.get
+import androidx.core.graphics.scale
+import com.example.firebasedemo.di.IoDispatcher
 import com.google.firebase.ml.modeldownloader.CustomModel
 import com.google.firebase.ml.modeldownloader.CustomModelDownloadConditions
 import com.google.firebase.ml.modeldownloader.DownloadType
 import com.google.firebase.ml.modeldownloader.FirebaseModelDownloader
+import kotlinx.coroutines.CoroutineDispatcher
 import kotlinx.coroutines.tasks.await
+import kotlinx.coroutines.withContext
 import org.tensorflow.lite.Interpreter
 import java.nio.ByteBuffer
 import java.nio.ByteOrder
 import javax.inject.Inject
-import androidx.core.graphics.scale
 
 interface CustomClassifierRepository {
     suspend fun initializeModel(): Result<Unit>
     suspend fun classifyImage(bitmap: Bitmap): Result<Int>
 }
 
-class CustomClassifierRepositoryImpl @Inject constructor() : CustomClassifierRepository {
+class CustomClassifierRepositoryImpl @Inject constructor(
+    @IoDispatcher private val ioDispatcher: CoroutineDispatcher
+) : CustomClassifierRepository {
     private var interpreter: Interpreter? = null
 
-    override suspend fun initializeModel(): Result<Unit> {
+    override suspend fun initializeModel(): Result<Unit> = withContext(ioDispatcher) {
         try {
             // Download the custom model from Firebase
             val conditions = CustomModelDownloadConditions.Builder()
@@ -46,9 +51,9 @@ class CustomClassifierRepositoryImpl @Inject constructor() : CustomClassifierRep
                     }
                 }.await()
 
-            return Result.success(Unit)
+            return@withContext Result.success(Unit)
         } catch (e: Exception) {
-            return Result.failure(e)
+            return@withContext Result.failure(e)
         }
     }
 

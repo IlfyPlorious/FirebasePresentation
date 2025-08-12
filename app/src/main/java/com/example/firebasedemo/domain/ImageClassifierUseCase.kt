@@ -1,12 +1,11 @@
 package com.example.firebasedemo.domain
 
 import android.content.Context
-import android.graphics.Bitmap
-import android.graphics.BitmapFactory
 import android.net.Uri
 import com.example.firebasedemo.di.IoDispatcher
 import com.example.firebasedemo.domain.repository.CustomClassifierRepository
 import com.example.firebasedemo.util.Brand
+import com.example.firebasedemo.util.loadBitmapFromUri
 import com.example.firebasedemo.util.mapPredictionToBrand
 import dagger.hilt.android.qualifiers.ApplicationContext
 import kotlinx.coroutines.CoroutineDispatcher
@@ -25,19 +24,13 @@ class ImageClassifierUseCaseImpl @Inject constructor(
     private val classifierRepository: CustomClassifierRepository
 ) : ImageClassifierUseCase {
     override suspend fun classify(imageUri: Uri): Result<Brand> = withContext(ioDispatcher) {
-        val bitmap = loadBitmapFromUri(imageUri)
+        val bitmap = context.loadBitmapFromUri(imageUri)
         val brandResult =
             classifierRepository.classifyImage(bitmap)
                 .getOrElse { return@withContext Result.failure(it) }.mapPredictionToBrand()
 
         return@withContext brandResult?.let { Result.success(it) }
             ?: Result.failure(Exception("Unknown brand"))
-    }
-
-    private fun loadBitmapFromUri(uri: Uri): Bitmap {
-        val inputStream = context.contentResolver.openInputStream(uri)
-            ?: throw IllegalArgumentException("Unable to open URI: $uri")
-        return BitmapFactory.decodeStream(inputStream)
     }
 }
 

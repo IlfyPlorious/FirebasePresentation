@@ -136,6 +136,9 @@ dependencies {
     // helps with performance and op support
     // For task-specific libraries (e.g., image classification))
 
+    // object detection kit
+    implementation("com.google.mlkit:object-detection:17.0.2")
+
     testImplementation(libs.junit)
     androidTestImplementation(libs.androidx.junit)
     androidTestImplementation(libs.androidx.espresso.core)
