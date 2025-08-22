@@ -4,7 +4,6 @@ import android.content.Context
 import android.graphics.Bitmap
 import android.net.Uri
 import android.util.Log
-import androidx.compose.material3.Tab
 import androidx.lifecycle.ViewModel
 import androidx.lifecycle.viewModelScope
 import com.example.firebasedemo.domain.ImageClassifierUseCase
@@ -28,59 +27,53 @@ class HomeViewModel @Inject constructor(
     private val imageClassifierUseCase: ImageClassifierUseCase,
     private val objectDetectorUseCase: ObjectDetectionUseCase,
 ) : ViewModel() {
-    private val _isDropdownOpened: MutableStateFlow<Boolean> = MutableStateFlow(false)
-    val isDropdownOpened: StateFlow<Boolean> = _isDropdownOpened
 
-    private val _dropdownSelection: MutableStateFlow<DropdownItem> =
-        MutableStateFlow(DropdownItem.CustomModel)
-    val dropdownSelection: StateFlow<DropdownItem> = _dropdownSelection
-
-    private val _boundingBoxedImage: MutableStateFlow<Bitmap?> = MutableStateFlow(null)
-    val boundingBoxedImage: StateFlow<Bitmap?> = _boundingBoxedImage
-
-    private val _imageUri: MutableStateFlow<Uri?> = MutableStateFlow(null)
-    val imageUri: StateFlow<Uri?> = _imageUri
-
-    private val _previewIsStarted: MutableStateFlow<Boolean> = MutableStateFlow(false)
-    val previewIsStarted: StateFlow<Boolean> = _previewIsStarted
-
-    private val _predictionIsLoading: MutableStateFlow<Boolean> = MutableStateFlow(false)
-    val predictionIsLoading: StateFlow<Boolean> = _predictionIsLoading
-
-    private val _showError: MutableStateFlow<Boolean> = MutableStateFlow(false)
-    val showError: StateFlow<Boolean> = _showError
+    private val _uiState: MutableStateFlow<HomescreenUIState> =
+        MutableStateFlow(HomescreenUIState())
+    val uiState: StateFlow<HomescreenUIState> = _uiState
 
     fun turnOnPreview() {
-        _previewIsStarted.update {
-            true
+        _uiState.update {
+            it.copy(
+                previewState = it.previewState.copy(
+                    isStarted = true, showError = false, boundingBoxedImage = null
+                )
+            )
         }
-        _showError.update {
-            false
-        }
-        _boundingBoxedImage.update { null }
     }
 
     fun turnOffPreview() {
-        _previewIsStarted.update {
-            false
+        _uiState.update {
+            it.copy(
+                previewState = it.previewState.copy(
+                    isStarted = false
+                )
+            )
         }
     }
 
     fun handleCapturedImageForCustomModel(capturedImageUri: Uri, callback: (Brand) -> Unit) {
-        _predictionIsLoading.update {
-            true
+        _uiState.update {
+            it.copy(
+                previewState = it.previewState.copy(
+                    isLoading = true,
+                    isStarted = false
+                )
+            )
         }
-        _previewIsStarted.update {
-            false
-        }
+
         viewModelScope.launch {
             val prediction = async {
                 delay(500) // delay to simulate loading
                 imageClassifierUseCase.classify(capturedImageUri)
             }.await().getOrNull()
 
-            _predictionIsLoading.update {
-                false
+            _uiState.update {
+                it.copy(
+                    previewState = it.previewState.copy(
+                        isLoading = false
+                    )
+                )
             }
 
             prediction?.let {
@@ -90,12 +83,15 @@ class HomeViewModel @Inject constructor(
     }
 
     fun handleCapturedImageForPredefinedModel(capturedImageUri: Uri) {
-        _predictionIsLoading.update {
-            true
+        _uiState.update { it: HomescreenUIState ->
+            it.copy(
+                previewState = it.previewState.copy(
+                    isLoading = true,
+                    isStarted = false
+                )
+            )
         }
-        _previewIsStarted.update {
-            false
-        }
+
         viewModelScope.launch {
             val detectedObjects = async {
                 delay(500) // delay to simulate loading
@@ -105,8 +101,12 @@ class HomeViewModel @Inject constructor(
                 return@getOrElse null
             }
 
-            _predictionIsLoading.update {
-                false
+            _uiState.update {
+                it.copy(
+                    previewState = it.previewState.copy(
+                        isLoading = false
+                    )
+                )
             }
 
             var capturedBitmap = context.loadBitmapFromUri(capturedImageUri)
@@ -121,29 +121,72 @@ class HomeViewModel @Inject constructor(
                     capturedBitmap.applyBoundingBoxToImage(detectedObject.boundingBox, index + 1)
             } ?: showError()
 
-            _boundingBoxedImage.update {
-                capturedBitmap
+            _uiState.update {
+                it.copy(
+                    previewState = it.previewState.copy(
+                        boundingBoxedImage = capturedBitmap
+                    )
+                )
             }
         }
     }
 
     private fun showError() {
-        _showError.update {
-            true
+        _uiState.update {
+            it.copy(
+                previewState = it.previewState.copy(
+                    showError = true
+                )
+            )
         }
     }
 
     fun closeDropdown() {
-        _isDropdownOpened.update { false }
+        _uiState.update {
+            it.copy(
+                dropdownState = it.dropdownState.copy(
+                    isOpen = false
+                )
+            )
+        }
     }
 
     fun expandDropdown() {
-        _isDropdownOpened.update { true }
+        _uiState.update {
+            it.copy(
+                dropdownState = it.dropdownState.copy(
+                    isOpen = true
+                )
+            )
+        }
     }
 
     fun setDropdownSelection(item: DropdownItem) {
-        _dropdownSelection.update { item }
+        _uiState.update {
+            it.copy(
+                dropdownState = it.dropdownState.copy(
+                    selectedOption = item
+                )
+            )
+        }
     }
+
+    data class DropdownState(
+        val isOpen: Boolean = false,
+        val selectedOption: DropdownItem = DropdownItem.CustomModel
+    )
+
+    data class PreviewState(
+        val isLoading: Boolean = false,
+        val isStarted: Boolean = false,
+        val showError: Boolean = false,
+        val boundingBoxedImage: Bitmap? = null
+    )
+
+    data class HomescreenUIState(
+        val dropdownState: DropdownState = DropdownState(),
+        val previewState: PreviewState = PreviewState()
+    )
 
     enum class DropdownItem {
         CustomModel,

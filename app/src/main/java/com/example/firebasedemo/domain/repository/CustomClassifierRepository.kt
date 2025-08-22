@@ -72,7 +72,8 @@ class CustomClassifierRepositoryImpl @Inject constructor(
     }
 
     private fun preprocess(bitmap: Bitmap): ByteBuffer {
-        val input = ByteBuffer.allocateDirect(4 * 3 * 224 * 224).order(ByteOrder.nativeOrder())
+        val floatSize = java.lang.Float.SIZE / java.lang.Byte.SIZE
+        val input = ByteBuffer.allocateDirect( floatSize * 3 * 224 * 224).order(ByteOrder.nativeOrder())
         val scaledBitmap = bitmap.scale(224, 224, false)
         for (y in 0 until 224) {
             for (x in 0 until 224) {
@@ -86,9 +87,9 @@ class CustomClassifierRepositoryImpl @Inject constructor(
                 // Normalize channel values to [-1.0, 1.0]. This requirement depends on the model.
                 // For example, some models might require values to be normalized to the range
                 // [0.0, 1.0] instead.
-                val rf = (r - 127) / 255f
-                val gf = (g - 127) / 255f
-                val bf = (b - 127) / 255f
+                val rf = r / 255f
+                val gf = g / 255f
+                val bf = b / 255f
 
                 input.putFloat(rf)
                 input.putFloat(gf)

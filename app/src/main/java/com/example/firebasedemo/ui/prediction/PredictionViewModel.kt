@@ -18,67 +18,128 @@ class PredictionViewModel @Inject constructor(
     private val geminiQueryUseCase: GeminiQueryUseCase
 ) : ViewModel() {
 
-    private val _predictionState: MutableStateFlow<Brand?> = MutableStateFlow(null)
-    val predictionState: StateFlow<Brand?> = _predictionState
+    private val _predictionScreenState: MutableStateFlow<PredictionScreenState> = MutableStateFlow(
+        PredictionScreenState()
+    )
+    val predictionScreenState: StateFlow<PredictionScreenState> = _predictionScreenState
 
-    private val _thumbsUpButtonsState: MutableStateFlow<Boolean?> = MutableStateFlow(null)
-    val thumbsUpButtonsState: StateFlow<Boolean?> = _thumbsUpButtonsState
+    fun showDialog() {
+        _predictionScreenState.update {
+            it.copy(
+                uiElementsState = it.uiElementsState.copy(
+                    showDialog = true
+                )
+            )
+        }
+    }
 
-    private val _saveReviewLoading: MutableStateFlow<Boolean> = MutableStateFlow(false)
-    val saveReviewLoading: StateFlow<Boolean> = _saveReviewLoading
-
-    private val _imageId: MutableStateFlow<String> = MutableStateFlow("")
-    val imageId: StateFlow<String> = _imageId
-
-    private val _geminiState: MutableStateFlow<GeminiState> = MutableStateFlow(GeminiState.Idle)
-    val geminiState: StateFlow<GeminiState> = _geminiState
+    fun closeDialog() {
+        _predictionScreenState.update {
+            it.copy(
+                uiElementsState = it.uiElementsState.copy(
+                    showDialog = false
+                )
+            )
+        }
+    }
 
     fun toggleThumbsUp() {
-        if (thumbsUpButtonsState.value == true) {
-            _thumbsUpButtonsState.update { null }
+        if (predictionScreenState.value.uiElementsState.thumbsUp == true) {
+            _predictionScreenState.update {
+                it.copy(
+                    uiElementsState = it.uiElementsState.copy(
+                        thumbsUp = null
+                    )
+                )
+            }
         } else {
-            _thumbsUpButtonsState.update { true }
+            _predictionScreenState.update {
+                it.copy(
+                    uiElementsState = it.uiElementsState.copy(
+                        thumbsUp = true
+                    )
+                )
+            }
         }
     }
 
     fun toggleThumbsDown() {
-        if (thumbsUpButtonsState.value == false) {
-            _thumbsUpButtonsState.update { null }
+        if (predictionScreenState.value.uiElementsState.thumbsUp == false) {
+            _predictionScreenState.update {
+                it.copy(
+                    uiElementsState = it.uiElementsState.copy(
+                        thumbsUp = null
+                    )
+                )
+            }
         } else {
-            _thumbsUpButtonsState.update { false }
+            _predictionScreenState.update {
+                it.copy(
+                    uiElementsState = it.uiElementsState.copy(
+                        thumbsUp = false
+                    )
+                )
+            }
         }
     }
 
     fun initialize(predictionId: Int) {
-        _predictionState.update {
-            predictionId.mapPredictionToBrand()
+        _predictionScreenState.update {
+            it.copy(
+                uiElementsState = it.uiElementsState.copy(
+                    brand = predictionId.mapPredictionToBrand()
+                )
+            )
         }
     }
 
     fun askGeminiAboutTheBrand() {
-        if (geminiState.value is GeminiState.Thinking) return
-        predictionState.value?.let { brand ->
+        if (predictionScreenState.value.geminiState is GeminiState.Thinking) return
+        predictionScreenState.value.uiElementsState.brand?.let { brand ->
             viewModelScope.launch {
-                _geminiState.update { GeminiState.Thinking }
+                _predictionScreenState.update {
+                    it.copy(
+                        geminiState = GeminiState.Thinking
+                    )
+                }
 
                 val geminiResult =
                     geminiQueryUseCase.askGemini(GeminiQuery.CarBrandInfo(brand)).getOrElse {
-                        _geminiState.update {
-                            GeminiState.Idle
+                        _predictionScreenState.update {
+                            it.copy(
+                                geminiState = GeminiState.Idle
+                            )
                         }
                         return@launch
                     }
 
-                _geminiState.update {
-                    GeminiState.Ready(geminiResult)
+                _predictionScreenState.update {
+                    it.copy(
+                        geminiState = GeminiState.Ready(geminiResult)
+                    )
                 }
             }
         }
     }
 
     fun clearGeminiAnswer() {
-        _geminiState.update { GeminiState.Idle }
+        _predictionScreenState.update {
+            it.copy(
+                geminiState = GeminiState.Idle
+            )
+        }
     }
+
+    data class UIElementsState(
+        val brand: Brand? = null,
+        val thumbsUp: Boolean? = null,
+        val showDialog: Boolean = false,
+    )
+
+    data class PredictionScreenState(
+        val uiElementsState: UIElementsState = UIElementsState(),
+        val geminiState: GeminiState = GeminiState.Idle
+    )
 
     sealed class GeminiState {
         object Thinking : GeminiState()

@@ -167,12 +167,7 @@ fun PermissionDeniedContent(content: @Composable () -> Unit) {
 @OptIn(ExperimentalGlideComposeApi::class, ExperimentalMaterial3Api::class)
 @Composable
 fun MainContent(navController: NavController, viewModel: HomeViewModel) {
-    val previewIsStarted = viewModel.previewIsStarted.collectAsState()
-    val predictionIsLoading = viewModel.predictionIsLoading.collectAsState()
-    val showError = viewModel.showError.collectAsState()
-    val isDropdownOpened = viewModel.isDropdownOpened.collectAsState()
-    val dropdownSelection = viewModel.dropdownSelection.collectAsState()
-    val boundingBoxedImage = viewModel.boundingBoxedImage.collectAsState()
+    val uiState = viewModel.uiState.collectAsState()
 
     Column(
         modifier = Modifier
@@ -199,7 +194,7 @@ fun MainContent(navController: NavController, viewModel: HomeViewModel) {
             )
         }
 
-        if (showError.value) {
+        if (uiState.value.previewState.showError) {
             Icon(
                 tint = Color.Red,
                 modifier = Modifier
@@ -209,7 +204,7 @@ fun MainContent(navController: NavController, viewModel: HomeViewModel) {
                 contentDescription = "Close",
             )
         } else {
-            if (predictionIsLoading.value) {
+            if (uiState.value.previewState.isLoading) {
                 GlideImage(
                     modifier = Modifier
                         .weight(1f, fill = true),
@@ -217,12 +212,12 @@ fun MainContent(navController: NavController, viewModel: HomeViewModel) {
                     contentDescription = "Loading indicator"
                 )
             } else {
-                if (previewIsStarted.value) {
+                if (uiState.value.previewState.isStarted) {
                     CameraPreview(
                         modifier = Modifier
                             .weight(1f, fill = true)
                     ) { capturedImageUri ->
-                        when (dropdownSelection.value) {
+                        when (uiState.value.dropdownState.selectedOption) {
                             HomeViewModel.DropdownItem.CustomModel -> viewModel.handleCapturedImageForCustomModel(
                                 capturedImageUri
                             ) { prediction ->
@@ -234,9 +229,9 @@ fun MainContent(navController: NavController, viewModel: HomeViewModel) {
                             )
                         }
                     }
-                } else if (boundingBoxedImage.value != null) {
+                } else if (uiState.value.previewState.boundingBoxedImage != null) {
                     GlideImage(
-                        model = boundingBoxedImage.value,
+                        model = uiState.value.previewState.boundingBoxedImage,
                         contentScale = ContentScale.Crop,
                         modifier = Modifier
                             .weight(1f, fill = true),
@@ -260,7 +255,7 @@ fun MainContent(navController: NavController, viewModel: HomeViewModel) {
                 .background(Color.Transparent)
                 .padding(0.dp),
             onClick = {
-                if (previewIsStarted.value) {
+                if (uiState.value.previewState.isStarted) {
                     viewModel.turnOffPreview()
                 } else {
                     viewModel.turnOnPreview()
@@ -272,21 +267,21 @@ fun MainContent(navController: NavController, viewModel: HomeViewModel) {
                 modifier = Modifier
                     .fillMaxSize()
                     .padding(0.dp),
-                painter = painterResource(id = if (previewIsStarted.value) R.drawable.car_hood_beams else R.drawable.car_hood),
+                painter = painterResource(id = if (uiState.value.previewState.isStarted) R.drawable.car_hood_beams else R.drawable.car_hood),
                 contentDescription = "Make prediction",
                 contentScale = ContentScale.FillBounds
             )
         }
 
         ExposedDropdownMenuBox(
-            expanded = isDropdownOpened.value,
+            expanded = uiState.value.dropdownState.isOpen,
             onExpandedChange = {
-                if (isDropdownOpened.value)
+                if (uiState.value.dropdownState.isOpen)
                     viewModel.closeDropdown()
                 else viewModel.expandDropdown()
             }) {
             OutlinedTextField(
-                value = dropdownSelection.value.name,
+                value = uiState.value.dropdownState.selectedOption.name,
                 onValueChange = {},
                 readOnly = true,
                 modifier = Modifier
@@ -303,7 +298,7 @@ fun MainContent(navController: NavController, viewModel: HomeViewModel) {
             )
 
             ExposedDropdownMenu(
-                expanded = isDropdownOpened.value,
+                expanded = uiState.value.dropdownState.isOpen,
                 onDismissRequest = { viewModel.closeDropdown() },
                 modifier = Modifier
                     .zIndex(10f)

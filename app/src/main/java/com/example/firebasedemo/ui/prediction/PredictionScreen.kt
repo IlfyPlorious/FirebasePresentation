@@ -36,10 +36,6 @@ import androidx.compose.material3.Text
 import androidx.compose.material3.rememberModalBottomSheetState
 import androidx.compose.runtime.Composable
 import androidx.compose.runtime.collectAsState
-import androidx.compose.runtime.getValue
-import androidx.compose.runtime.mutableStateOf
-import androidx.compose.runtime.remember
-import androidx.compose.runtime.setValue
 import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
 import androidx.compose.ui.draw.rotate
@@ -73,21 +69,17 @@ fun PredictionScreen(
     navController: NavController,
     viewModel: PredictionViewModel = hiltViewModel<PredictionViewModel>()
 ) {
-    val brand = viewModel.predictionState.collectAsState()
-    val thumbsUp = viewModel.thumbsUpButtonsState.collectAsState()
-    var showDialog by remember { mutableStateOf(false) }
-
-    val geminiState = viewModel.geminiState.collectAsState()
+    val uiState = viewModel.predictionScreenState.collectAsState()
     val sheetState = rememberModalBottomSheetState(
         skipPartiallyExpanded = false,
     )
 
     val context = LocalContext.current
 
-    if (showDialog) {
+    if (uiState.value.uiElementsState.showDialog) {
         AlertDialog(
             containerColor = VeryLightGray,
-            onDismissRequest = { showDialog = false },
+            onDismissRequest = { viewModel.closeDialog() },
             title = {
                 Text(text = "Information", style = Typography.titleLarge, color = DarkBlue)
             },
@@ -109,7 +101,7 @@ fun PredictionScreen(
                         containerColor = DarkBlue,
                     ),
                     onClick = {
-                        showDialog = false
+                        viewModel.closeDialog()
                     }) {
                     Text(stringResource(R.string.close))
                 }
@@ -134,7 +126,7 @@ fun PredictionScreen(
             IconButton(onClick = { navController.popBackStack() }) {
                 Icon(Icons.Filled.ArrowBack, contentDescription = "Back", tint = VeryLightGray)
             }
-            IconButton(onClick = { showDialog = true }) {
+            IconButton(onClick = { viewModel.showDialog() }) {
                 Icon(Icons.Filled.Info, contentDescription = "Info", tint = VeryLightGray)
             }
         }
@@ -143,7 +135,9 @@ fun PredictionScreen(
             modifier = Modifier
                 .weight(4f, fill = true)
                 .padding(12.dp),
-            colors = CardDefaults.cardColors(containerColor = brand.value?.color ?: VeryLightGray)
+            colors = CardDefaults.cardColors(
+                containerColor = uiState.value.uiElementsState.brand?.color ?: VeryLightGray
+            )
         ) {
             Column(
                 modifier = Modifier.fillMaxSize(),
@@ -152,7 +146,7 @@ fun PredictionScreen(
             ) {
                 Image(
                     painter = painterResource(
-                        id = brand.value?.icon ?: R.drawable.brand_unknown
+                        id = uiState.value.uiElementsState.brand?.icon ?: R.drawable.brand_unknown
                     ),
                     contentDescription = "Hero Image",
                     modifier = Modifier
@@ -164,7 +158,7 @@ fun PredictionScreen(
         }
 
         Text(
-            text = "Wow! The car is a ${brand.value?.name}!\nBrowse more models in the link below \uD83D\uDC47",
+            text = "Wow! The car is a ${uiState.value.uiElementsState.brand?.name}!\nBrowse more models in the link below \uD83D\uDC47",
             fontSize = 18.sp,
             style = TextStyle(color = VeryLightGray, fontSize = 16.sp),
             modifier = Modifier
@@ -188,7 +182,7 @@ fun PredictionScreen(
                     verticalAlignment = Alignment.CenterVertically,
                     horizontalArrangement = Arrangement.Center
                 ) {
-                    if (geminiState.value !is PredictionViewModel.GeminiState.Thinking) {
+                    if (uiState.value.geminiState !is PredictionViewModel.GeminiState.Thinking) {
                         Image(
                             painter = painterResource(
                                 id = R.drawable.stars
@@ -211,7 +205,7 @@ fun PredictionScreen(
                     }
                     Text(
                         modifier = Modifier.padding(8.dp),
-                        text = if (geminiState.value !is PredictionViewModel.GeminiState.Thinking) "Ask Gemini about the brand" else "Gemini is thinking",
+                        text = if (uiState.value.geminiState !is PredictionViewModel.GeminiState.Thinking) "Ask Gemini about the brand" else "Gemini is thinking",
                         style = Typography.titleLarge, color = DarkBlue
                     )
                 }
@@ -230,7 +224,7 @@ fun PredictionScreen(
                     .size(width = 100.dp, height = 30.dp)
                     .clickable {
                         val intent = Intent(Intent.ACTION_VIEW).apply {
-                            setData(Uri.parse("https://www.autovit.ro/autoturisme/${brand.value?.name}"))
+                            setData(Uri.parse("https://www.autovit.ro/autoturisme/${uiState.value.uiElementsState.brand?.name}"))
                         }
 
                         context.startActivity(intent)
@@ -254,7 +248,7 @@ fun PredictionScreen(
 
             IconButton(onClick = {
                 val intent = Intent(Intent.ACTION_VIEW).apply {
-                    setData(Uri.parse(brand.value?.website))
+                    setData(Uri.parse(uiState.value.uiElementsState.brand?.website))
                 }
 
                 context.startActivity(intent)
@@ -286,7 +280,7 @@ fun PredictionScreen(
                         .padding(8.dp),
                     onClick = { viewModel.toggleThumbsUp() }) {
                     Icon(
-                        if (thumbsUp.value == true) Icons.Filled.ThumbUp else Icons.Outlined.ThumbUp,
+                        if (uiState.value.uiElementsState.thumbsUp == true) Icons.Filled.ThumbUp else Icons.Outlined.ThumbUp,
                         contentDescription = "Thumbs Up",
                         tint = VeryLightGray
                     )
@@ -297,7 +291,7 @@ fun PredictionScreen(
                         .padding(8.dp),
                     onClick = { viewModel.toggleThumbsDown() }) {
                     Icon(
-                        if (thumbsUp.value == false) Icons.Filled.ThumbUp else Icons.Outlined.ThumbUp,
+                        if (uiState.value.uiElementsState.thumbsUp == false) Icons.Filled.ThumbUp else Icons.Outlined.ThumbUp,
                         contentDescription = "Thumbs Down",
                         tint = VeryLightGray,
                         modifier = Modifier.rotate(180f)
@@ -316,7 +310,7 @@ fun PredictionScreen(
         }
     }
 
-    if (geminiState.value is PredictionViewModel.GeminiState.Ready) {
+    if (uiState.value.geminiState is PredictionViewModel.GeminiState.Ready) {
         ModalBottomSheet(
             modifier = Modifier.fillMaxHeight(),
             sheetState = sheetState,
@@ -332,7 +326,7 @@ fun PredictionScreen(
                     modifier = Modifier.padding(vertical = 8.dp),
                 ) {
                     Markdown(
-                        (geminiState.value as PredictionViewModel.GeminiState.Ready).text
+                        (uiState.value.geminiState as PredictionViewModel.GeminiState.Ready).text
                     )
                 }
             }
