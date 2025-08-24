@@ -1,0 +1,117 @@
+@startuml
+skinparam classAttributeIconSize 0
+skinparam style strictuml
+
+package presentation {
+    class MainActivity
+
+    frame Home {
+        class HomeComposable
+
+        class CameraPreviewComposable {
+            + takePhoto(): Uri
+        }
+
+        class HomeViewModel {
+            + dropdownSelection: StateFlow<DropdownItem>
+            + predictionLoading: StateFlow<Boolean>
+            + previewIsStarted: StateFlow<Boolean>
+            + turnOnPreview()
+            + turnOffPreview()
+            + handleCapturedImageForCustomModel(capturedImageUri: Uri, callback: (Brand) -> Unit)
+            + handleCapturedImageForPredefinedModel(capturedImageUri: Uri)
+        }
+    }
+
+    frame Prediction {
+        class PredictionComposable
+        class ModalBottomSheet
+        class PredictionViewModel {
+            + predictionState: StateFlow<Brand?>
+            + geminiState: StateFlow<GeminiState>
+            + askGeminiAboutTheBrand()
+        }
+    }
+}
+
+package domain {
+    class ImageClassifierUseCase {
+        + classify(imageUri: Uri)
+    }
+
+    class GeminiQueryUseCase {
+        + askGemini(query: GeminiQuery)
+    }
+
+    class ObjectDetectionUseCase {
+        + detectObjects(imageUri: Uri)
+    }
+
+    frame Repo{
+        class CustomClassifierRepository {
+            + initializeModel(): Result<Unit>
+            + classifyImage(bitmap: Bitmap): Result<Int>
+        }
+
+        class PredefinedKitsRepository {
+            + detectObjectsInBitmap(bitmap: Bitmap): Result<List<DetectedObject>>
+            + askGemini(query: String): Result<String>
+        }
+    }
+}
+
+package data {
+    object MLKit
+
+    frame remote{
+        cloud {
+            class FirebaseML
+            class GeminiAPI
+        }
+    }
+}
+
+package model {
+    abstract GeminiState
+    class Idle
+    class Thinking
+    class Ready {
+        + text: String
+    }
+
+    abstract DropdownItem
+    class CustomModel
+    class PredefinedObjectDetector
+}
+
+MainActivity --> HomeComposable
+MainActivity --> PredictionComposable
+
+HomeComposable --> CameraPreviewComposable
+HomeComposable --> HomeViewModel
+HomeViewModel --> ImageClassifierUseCase
+HomeViewModel --> ObjectDetectionUseCase
+
+PredictionComposable --> PredictionViewModel : observes prediction state
+PredictionComposable --> ModalBottomSheet
+ModalBottomSheet --> PredictionViewModel : observes gemini state
+PredictionViewModel --> GeminiQueryUseCase
+
+GeminiState <|-- Idle
+GeminiState <|-- Thinking
+GeminiState <|-- Ready
+
+DropdownItem <|-- CustomModel
+DropdownItem <|-- PredefinedObjectDetector
+
+ImageClassifierUseCase --> CustomClassifierRepository
+ObjectDetectionUseCase --> PredefinedKitsRepository
+GeminiQueryUseCase --> PredefinedKitsRepository
+
+CustomClassifierRepository --> MLKit
+PredefinedKitsRepository --> MLKit
+PredefinedKitsRepository --> GeminiAPI
+
+MLKit --> FirebaseML
+
+@enduml
