@@ -46,6 +46,8 @@ import androidx.compose.ui.res.painterResource
 import androidx.compose.ui.res.stringResource
 import androidx.compose.ui.text.TextStyle
 import androidx.compose.ui.tooling.preview.Preview
+import androidx.compose.ui.tooling.preview.PreviewParameter
+import androidx.compose.ui.tooling.preview.PreviewParameterProvider
 import androidx.compose.ui.unit.dp
 import androidx.compose.ui.unit.sp
 import androidx.hilt.navigation.compose.hiltViewModel
@@ -53,13 +55,11 @@ import androidx.navigation.NavController
 import com.bumptech.glide.integration.compose.ExperimentalGlideComposeApi
 import com.bumptech.glide.integration.compose.GlideImage
 import com.example.firebasedemo.R
-import com.example.firebasedemo.domain.GeminiQueryUseCase
 import com.example.firebasedemo.ui.theme.DarkBlue
 import com.example.firebasedemo.ui.theme.DarkGray
 import com.example.firebasedemo.ui.theme.Orange
 import com.example.firebasedemo.ui.theme.Typography
 import com.example.firebasedemo.ui.theme.VeryLightGray
-import com.example.firebasedemo.util.GeminiQuery
 import com.halilibo.richtext.markdown.Markdown
 import com.halilibo.richtext.ui.BasicRichText
 
@@ -166,51 +166,11 @@ fun PredictionScreen(
                 .weight(1f)
         )
 
-        Row(
+        AskGeminiButton(
             modifier = Modifier
                 .padding(12.dp)
-                .fillMaxWidth(),
-            verticalAlignment = Alignment.CenterVertically,
-            horizontalArrangement = Arrangement.Center
-        ) {
-            Card(
-                modifier = Modifier.clickable { viewModel.askGeminiAboutTheBrand() },
-                shape = RoundedCornerShape(8.dp),
-                colors = CardDefaults.cardColors(containerColor = VeryLightGray)
-            ) {
-                Row(
-                    verticalAlignment = Alignment.CenterVertically,
-                    horizontalArrangement = Arrangement.Center
-                ) {
-                    if (uiState.value.geminiState !is PredictionViewModel.GeminiState.Thinking) {
-                        Image(
-                            painter = painterResource(
-                                id = R.drawable.stars
-                            ),
-                            modifier = Modifier
-                                .height(32.dp)
-                                .padding(6.dp),
-                            contentDescription = "Gemini icon",
-                            contentScale = ContentScale.Fit,
-                            colorFilter = ColorFilter.tint(Orange)
-                        )
-                    } else {
-                        GlideImage(
-                            modifier = Modifier
-                                .height(32.dp)
-                                .padding(6.dp),
-                            model = R.drawable.wheel_spin,
-                            contentDescription = "Loading indicator"
-                        )
-                    }
-                    Text(
-                        modifier = Modifier.padding(8.dp),
-                        text = if (uiState.value.geminiState !is PredictionViewModel.GeminiState.Thinking) "Ask Gemini about the brand" else "Gemini is thinking",
-                        style = Typography.titleLarge, color = DarkBlue
-                    )
-                }
-            }
-        }
+                .fillMaxWidth(), uiState.value.geminiState
+        ) { viewModel.askGeminiAboutTheBrand() }
 
         Row(
             modifier = Modifier
@@ -335,15 +295,97 @@ fun PredictionScreen(
 }
 
 
+@OptIn(ExperimentalGlideComposeApi::class)
+@Composable
+fun AskGeminiButton(
+    modifier: Modifier,
+    geminiState: PredictionViewModel.GeminiState,
+    onClick: () -> Unit
+) {
+    Row(
+        modifier = modifier,
+        verticalAlignment = Alignment.CenterVertically,
+        horizontalArrangement = Arrangement.Center
+    ) {
+        Card(
+            modifier = Modifier.clickable { onClick() },
+            shape = RoundedCornerShape(8.dp),
+            colors = CardDefaults.cardColors(containerColor = VeryLightGray)
+        ) {
+            Row(
+                verticalAlignment = Alignment.CenterVertically,
+                horizontalArrangement = Arrangement.Center
+            ) {
+                if (geminiState !is PredictionViewModel.GeminiState.Thinking) {
+                    Image(
+                        painter = painterResource(
+                            id = R.drawable.stars
+                        ),
+                        modifier = Modifier
+                            .height(32.dp)
+                            .padding(6.dp),
+                        contentDescription = "Gemini icon",
+                        contentScale = ContentScale.Fit,
+                        colorFilter = ColorFilter.tint(Orange)
+                    )
+                } else {
+                    Image(
+                        painter = painterResource(
+                            id = R.drawable.wheel_spin
+                        ),
+                        modifier = Modifier
+                            .height(32.dp)
+                            .padding(6.dp),
+                        contentDescription = "Gemini icon",
+                        contentScale = ContentScale.Fit,
+                    )
+//                    GlideImage(
+//                        modifier = Modifier
+//                            .height(32.dp)
+//                            .padding(6.dp),
+//                        model = R.drawable.wheel_spin,
+//                        contentDescription = "Loading indicator"
+//                    )
+                }
+                Text(
+                    modifier = Modifier.padding(8.dp),
+                    text = if (geminiState !is PredictionViewModel.GeminiState.Thinking) "Ask Gemini about the brand" else "Gemini is thinking",
+                    style = Typography.titleLarge, color = DarkBlue
+                )
+            }
+        }
+    }
+}
+
+//@Preview
+//@Composable
+//fun PredictionScreenPreview() {
+//    PredictionScreen(
+//        navController = NavController(LocalContext.current),
+//        viewModel = PredictionViewModel(object : GeminiQueryUseCase {
+//            override suspend fun askGemini(query: GeminiQuery): Result<String> {
+//                return Result.success("This is a prediction")
+//            }
+//        })
+//    )
+//}
+
+class GeminiPreviewStates : PreviewParameterProvider<PredictionViewModel.GeminiState> {
+    override val values: Sequence<PredictionViewModel.GeminiState> =
+        sequenceOf(
+            PredictionViewModel.GeminiState.Idle,
+            PredictionViewModel.GeminiState.Ready("This is a prediction"),
+            PredictionViewModel.GeminiState.Thinking
+        )
+}
+
 @Preview
 @Composable
-fun PredictionScreenPreview() {
-    PredictionScreen(
-        navController = NavController(LocalContext.current),
-        viewModel = PredictionViewModel(object : GeminiQueryUseCase {
-            override suspend fun askGemini(query: GeminiQuery): Result<String> {
-                return Result.success("This is a prediction")
-            }
-        })
-    )
+fun AskGeminiButtonPreview(@PreviewParameter(GeminiPreviewStates::class) geminiPreviewStates: PredictionViewModel.GeminiState) {
+    AskGeminiButton(
+        modifier = Modifier
+            .padding(12.dp)
+            .fillMaxWidth(),
+        geminiPreviewStates
+    ) {}
 }

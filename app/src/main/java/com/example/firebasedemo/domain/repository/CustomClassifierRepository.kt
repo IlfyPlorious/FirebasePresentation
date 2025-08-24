@@ -1,9 +1,5 @@
 package com.example.firebasedemo.domain.repository
 
-import android.graphics.Bitmap
-import android.graphics.Color
-import androidx.core.graphics.get
-import androidx.core.graphics.scale
 import com.example.firebasedemo.di.IoDispatcher
 import com.google.firebase.ml.modeldownloader.CustomModel
 import com.google.firebase.ml.modeldownloader.CustomModelDownloadConditions
@@ -19,7 +15,7 @@ import javax.inject.Inject
 
 interface CustomClassifierRepository {
     suspend fun initializeModel(): Result<Unit>
-    suspend fun classifyImage(bitmap: Bitmap): Result<Int>
+    suspend fun classifyImage(imageByteBuffer: ByteBuffer): Result<Int>
 }
 
 class CustomClassifierRepositoryImpl @Inject constructor(
@@ -57,48 +53,19 @@ class CustomClassifierRepositoryImpl @Inject constructor(
         }
     }
 
-    override suspend fun classifyImage(bitmap: Bitmap): Result<Int> {
+    override suspend fun classifyImage(imageByteBuffer: ByteBuffer): Result<Int> {
         if (interpreter == null) {
             initializeModel().onFailure { return Result.failure(it) }
         }
 
-        val processedInput = preprocess(bitmap)
         val bufferSize = 48 * java.lang.Float.SIZE / java.lang.Byte.SIZE
         val modelOutput = ByteBuffer.allocateDirect(bufferSize).order(ByteOrder.nativeOrder())
 
-        interpreter?.run(processedInput, modelOutput)
+        interpreter?.run(imageByteBuffer, modelOutput)
 
         return Result.success(modelOutput.toClassPrediction())
     }
 
-    private fun preprocess(bitmap: Bitmap): ByteBuffer {
-        val floatSize = java.lang.Float.SIZE / java.lang.Byte.SIZE
-        val input = ByteBuffer.allocateDirect( floatSize * 3 * 224 * 224).order(ByteOrder.nativeOrder())
-        val scaledBitmap = bitmap.scale(224, 224, false)
-        for (y in 0 until 224) {
-            for (x in 0 until 224) {
-                val px = scaledBitmap[x, y]
-
-                // Get channel values from the pixel value.
-                val r = Color.red(px)
-                val g = Color.green(px)
-                val b = Color.blue(px)
-
-                // Normalize channel values to [-1.0, 1.0]. This requirement depends on the model.
-                // For example, some models might require values to be normalized to the range
-                // [0.0, 1.0] instead.
-                val rf = r / 255f
-                val gf = g / 255f
-                val bf = b / 255f
-
-                input.putFloat(rf)
-                input.putFloat(gf)
-                input.putFloat(bf)
-            }
-        }
-
-        return input.apply { rewind() }
-    }
 
     private fun ByteBuffer.toClassPrediction(): Int {
         rewind()

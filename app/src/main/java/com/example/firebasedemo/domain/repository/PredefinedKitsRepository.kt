@@ -1,6 +1,5 @@
 package com.example.firebasedemo.domain.repository
 
-import android.graphics.Bitmap
 import com.example.firebasedemo.di.IoDispatcher
 import com.google.firebase.Firebase
 import com.google.firebase.ai.GenerativeModel
@@ -17,7 +16,7 @@ import kotlinx.coroutines.withContext
 import javax.inject.Inject
 
 interface PredefinedKitsRepository {
-    suspend fun detectObjectsInBitmap(bitmap: Bitmap): Result<List<DetectedObject>>
+    suspend fun detectObjectsInBitmap(inputImage: InputImage): Result<List<DetectedObject>>
     suspend fun askGemini(query: String): Result<String>
 }
 
@@ -50,13 +49,11 @@ class PredefinedKitsRepositoryImpl @Inject constructor(
             .generativeModel("gemini-2.5-flash")
     }
 
-    override suspend fun detectObjectsInBitmap(bitmap: Bitmap): Result<List<DetectedObject>> =
+    override suspend fun detectObjectsInBitmap(inputImage: InputImage): Result<List<DetectedObject>> =
         withContext(ioDispatcher) {
             if (objectDetector == null) {
                 initDetector()
             }
-
-            val inputImage = InputImage.fromBitmap(bitmap, 0)
 
             val detectedObjectsList = mutableListOf<DetectedObject>()
 

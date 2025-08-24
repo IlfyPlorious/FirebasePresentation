@@ -59,7 +59,7 @@ sealed class GeminiQuery {
     abstract fun getQuery() : String
     class CarBrandInfo(val brand: Brand) : GeminiQuery() {
         override fun getQuery(): String {
-            return "I am a car enthusiast and I want to learn more about ${brand.name}. Tell me in a couple of sentences a bit about this brand's history, what's the most popular car and if I should buy it."
+            return "I am a car enthusiast and I want to learn more about ${brand.name}. Tell me in a paragraph about this brand's history, in another paragraph what's the most popular car model and in another paragraph if I should buy it."
         }
     }
 }

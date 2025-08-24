@@ -50,11 +50,11 @@ package domain {
     frame Repo{
         class CustomClassifierRepository {
             + initializeModel(): Result<Unit>
-            + classifyImage(bitmap: Bitmap): Result<Int>
+            + classifyImage(imageByteBuffer: ByteBuffer): Result<Int>
         }
 
         class PredefinedKitsRepository {
-            + detectObjectsInBitmap(bitmap: Bitmap): Result<List<DetectedObject>>
+            + detectObjectsInBitmap(inputImage: InputImage): Result<List<DetectedObject>>
             + askGemini(query: String): Result<String>
         }
     }
@@ -71,7 +71,7 @@ package data {
     }
 }
 
-package model {
+package UIstates {
     abstract GeminiState
     class Idle
     class Thinking

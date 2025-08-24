@@ -43,7 +43,6 @@ import androidx.compose.runtime.remember
 import androidx.compose.runtime.setValue
 import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
-import androidx.compose.ui.draw.rotate
 import androidx.compose.ui.graphics.Color
 import androidx.compose.ui.graphics.RectangleShape
 import androidx.compose.ui.graphics.painter.BitmapPainter
@@ -188,7 +187,11 @@ fun MainContent(navController: NavController, viewModel: HomeViewModel) {
             )
             Text(
                 modifier = Modifier.padding(vertical = 12.dp),
-                text = stringResource(id = R.string.hero_subtitle),
+                text = stringResource(
+                    id = if (uiState.value.dropdownState.selectedOption
+                        == HomeViewModel.DropdownItem.CustomModel
+                    ) R.string.hero_subtitle else R.string.hero_subtitle_2
+                ),
                 style = Typography.bodyLarge,
                 color = VeryLightGray,
             )

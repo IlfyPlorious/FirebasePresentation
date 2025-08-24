@@ -6,6 +6,7 @@
     <string name="save_button">Save</string>
     <string name="hero_title">Hello there 👋!</string>
     <string name="hero_subtitle">You just got your hands on a detectacar. Turn on your lights to detect a car!</string>
+    <string name="hero_subtitle_2">You just got your hands on an object detector. Turn on your lights to highlight them!</string>
     <string name="info_dialog_desc">The prediction is being made using a neural network based on a ResNet architecture, together with a bounding box detector in form of YOLO. The prediction is yet to be improved, so we count on your feedback to make it work better!</string>
     <string name="close">Close</string>
 </resources>

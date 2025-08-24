@@ -5,6 +5,7 @@ import android.net.Uri
 import com.example.firebasedemo.di.IoDispatcher
 import com.example.firebasedemo.domain.repository.PredefinedKitsRepository
 import com.example.firebasedemo.util.loadBitmapFromUri
+import com.google.mlkit.vision.common.InputImage
 import com.google.mlkit.vision.objects.DetectedObject
 import dagger.hilt.android.qualifiers.ApplicationContext
 import kotlinx.coroutines.CoroutineDispatcher
@@ -26,7 +27,7 @@ class ObjectDetectionUseCaseImpl @Inject constructor(
         withContext(ioDispatcher) {
             val bitmap = context.loadBitmapFromUri(imageUri)
             val detectedObjects =
-                predefinedKitsRepository.detectObjectsInBitmap(bitmap)
+                predefinedKitsRepository.detectObjectsInBitmap(InputImage.fromBitmap(bitmap, 0))
                     .getOrElse { return@withContext Result.failure(it) }
 
             return@withContext detectedObjects.takeIf { it.isNotEmpty() }

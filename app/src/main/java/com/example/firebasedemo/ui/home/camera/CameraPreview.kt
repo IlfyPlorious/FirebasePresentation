@@ -4,6 +4,7 @@ import android.content.Context
 import android.net.Uri
 import android.util.Log
 import android.util.Size
+import android.view.Surface
 import androidx.camera.core.CameraSelector
 import androidx.camera.core.ImageCapture
 import androidx.camera.core.ImageCaptureException
@@ -63,6 +64,7 @@ fun CameraPreview(
                         )
                     ).build()
             )
+            .setTargetRotation(Surface.ROTATION_0)
             .build()
     }
 
@@ -80,6 +82,7 @@ fun CameraPreview(
                         )
                     ).build()
             )
+            .setTargetRotation(Surface.ROTATION_0)
             .build().apply {
                 setSurfaceProvider(previewView.surfaceProvider)
             }
@@ -130,7 +133,7 @@ fun CameraPreview(
 
 private fun takePhoto(context: Context, imageCapture: ImageCapture?, callback: (Uri?) -> Unit) {
     val photoFile = File(
-        context.getExternalFilesDir(null),
+        context.filesDir,
         SimpleDateFormat(FILENAME_FORMAT, Locale.US)
             .format(System.currentTimeMillis()) + ".jpg"
     )
